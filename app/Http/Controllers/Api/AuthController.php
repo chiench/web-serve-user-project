@@ -20,6 +20,7 @@ class AuthController extends Controller
         if (Auth::attempt($data)) {
             $token = Str::random(36);
             return response()->json([
+                'user' => User::where('email', $data['email'])->first()->toArray(),
                 'token' => $token,
             ], 200);
         } else {
@@ -41,7 +42,7 @@ class AuthController extends Controller
             $token = Str::random(36);
             DB::commit();
             return response()->json([
-                'data' => $user,
+                'user' => $user,
                 'token' => $token,
             ], 200);
 
@@ -57,4 +58,22 @@ class AuthController extends Controller
         dd(2);
 
     }
+    // public function generateUrlImage()
+    // {
+    //     $count = 1;
+    //     $urlImage = "";
+    //     if ($count < 33) {
+    //         if ($count > 16) {
+    //             $urlImage = "/product-" . (33 - $count) . '-2.jpg';
+    //         } else {
+    //             $urlImage = "/product-" . $count . "-1.jpg";
+    //         }
+    //     } elseif ($count < 41 && $count >= 33) {
+    //         $urlImage = "/category-thumb-" . (41 - $count) . ".jpg";
+    //     } elseif ($count < 49 && $count >= 41) {
+    //         $urlImage = "/thumbnail-" . (50 - $count) . ".jpg";
+    //     }
+    //     $count++;
+    //     return $urlImage;
+    // }
 }

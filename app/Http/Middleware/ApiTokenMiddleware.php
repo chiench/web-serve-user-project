@@ -16,6 +16,12 @@ class ApiTokenMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
+        if ($request->header('authorization') === null) {
+            return response()->json([
+                'error' => ' Không có quyền truy cập',
+            ], 403);
+
+        }
         return $next($request);
     }
 }
