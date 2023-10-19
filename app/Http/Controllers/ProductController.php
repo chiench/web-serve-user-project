@@ -8,6 +8,7 @@ use App\Http\Resources\ProductCollection;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -20,7 +21,7 @@ class ProductController extends Controller
     {
         // return Product::query()->orderBy('id')->get();
         // return new ProductResource(Product::query()->orderBy('id')->paginate(10));
-        return new ProductCollection(Product::query()->orderBy('id')->paginate(10));
+        return new ProductCollection(Product::query()->orderBy('id', 'desc')->paginate(10));
     }
 
     /**
@@ -41,8 +42,33 @@ class ProductController extends Controller
      */
     public function store(ProductStoreRequest $productStoreRequest)
     {
-        $data = $productStoreRequest->validated();
-        $product = Product::create($data);
+        $data = $productStoreRequest->safe();
+        if ($productStoreRequest->has('files')) {
+            $files = $productStoreRequest->file('files');
+            $storage = Storage::disk('public');
+            $allFiles = $storage->files('images');
+            foreach ($files as $key => $file) {
+                $nameFile = time() . '-' . str_replace(' ', '', trim($file->getClientOriginalName()));
+                $existFile = false;
+                $imageDB = '';
+                foreach ($allFiles as $key => $name) {
+                    if (strpos($name, str_replace(' ', '', trim($file->getClientOriginalName())))) {
+                        $imageDB = $allFiles[$key];
+                        $existFile = true;
+                        break;
+                    }
+                }
+                if (!$existFile) {
+                    $storage->putFileAs('images', $file, $nameFile);
+                    $data = $data->merge(['image' => $nameFile]);
+                } else {
+                    $data = $data->merge(['image' => str_replace('images/', '', trim($imageDB))]);
+                }
+
+            }
+        }
+        // dd($data->toArray());
+        $product = Product::create($data->toArray());
         return new ProductResource($product);
 
     }
@@ -78,11 +104,33 @@ class ProductController extends Controller
      */
     public function update(ProductUpdateRequest $productUpdateRequest, Product $product)
     {
-        $data = $productUpdateRequest->validated();
+        $data = $productUpdateRequest->safe();
         $updatedData = Product::where('id', $product->id)->first();
-        $updatedData->update($data);
+        if ($productUpdateRequest->has('files')) {
+            $files = $productUpdateRequest->file('files');
+            foreach ($files as $key => $file) {
+                $storage = Storage::disk('public');
+                $allFiles = $storage->files('images');
+                $nameFile = time() . '-' . str_replace(' ', '', trim($file->getClientOriginalName()));
+                $existFile = false;
+                $imageDB = '';
+                foreach ($allFiles as $key => $name) {
+                    if (strpos($name, str_replace(' ', '', trim($file->getClientOriginalName())))) {
+                        $imageDB = $allFiles[$key];
+                        $existFile = true;
+                        break;
+                    }
+                }
+                if (!$existFile) {
+                    $storage->putFileAs('images', $file, $nameFile);
+                    $data = $data->merge(['image' => $nameFile]);
+                } else {
+                    $data = $data->merge(['image' => str_replace('images/', '', trim($imageDB))]);
+                }
+            }
+        }
+        $updatedData->update($data->toArray());
         return new ProductResource($updatedData);
-
     }
 
     /**
